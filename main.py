@@ -10,6 +10,7 @@ import torch
 from torch.nn import CrossEntropyLoss, DataParallel
 from torch.optim import SGD
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 
@@ -23,7 +24,7 @@ def parse_args():
     parser.add_argument('--dataset',
                         type=str,
                         default='pascal',
-                        choices=['pascal', 'coco'],
+                        choices=['pascal', 'coco', 'steel'],
                         help='training dataset')
     parser.add_argument('--batch-size',
                         type=int,
@@ -73,7 +74,13 @@ def parse_args():
 def evaluate(model, dataloader, args):
     tbar = tqdm(dataloader)
 
-    num_classes = 21 if args.dataset == 'pascal' else 81
+    # num_classes = 21 if args.dataset == 'pascal' else 81
+    if args.dataset == 'pascal':
+        num_classes = 21
+    elif args.dataset == 'coco':
+        num_classes = 81
+    else:num_classes = 10
+
     metric = mIOU(num_classes)
 
     for i, (img_s_list, mask_s_list, img_q, mask_q, cls, _, id_q) in enumerate(tbar):
@@ -108,13 +115,14 @@ def main():
     trainloader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True,
                              pin_memory=True, num_workers=4, drop_last=True)
     testset = FewShot(args.dataset, args.data_root, None, 'val',
-                      args.fold, args.shot, 1000 if args.dataset == 'pascal' else 4000)
+                      args.fold, args.shot, 1000)
     testloader = DataLoader(testset, batch_size=1, shuffle=False,
                             pin_memory=True, num_workers=4, drop_last=False)
 
     model = MatchingNet(args.backbone)
     print('\nParams: %.1fM' % count_params(model))
-
+    log_dir = os.path.join(save_path, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())))
+    writer = SummaryWriter(log_dir=log_dir)
     for module in model.modules():
         if isinstance(module, torch.nn.BatchNorm2d):
             for param in module.parameters():
@@ -156,7 +164,7 @@ def main():
             pred = model(img_s_list, mask_s_list, img_q)
 
             loss = criterion(pred, mask_q)
-
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -168,11 +176,12 @@ def main():
                 optimizer.param_groups[0]['lr'] /= 10.0
 
             tbar.set_description('Loss: %.3f' % (total_loss / (i + 1)))
+            writer.add_scalar("train_loss", total_loss / (i + 1), (i + 1) * (epoch + 1))
 
         model.eval()
         set_seed(args.seed)
         miou = evaluate(model, testloader, args)
-
+        writer.add_scalar("val_miou", miou, epoch + 1)
         if miou >= previous_best:
             best_model = deepcopy(model)
             previous_best = miou
@@ -184,6 +193,7 @@ def main():
         set_seed(args.seed + seed)
 
         miou = evaluate(best_model, testloader, args)
+        writer.add_scalar("5_seed_miou", miou, seed)
         total_miou += miou
 
     print('\n' + '*' * 32)

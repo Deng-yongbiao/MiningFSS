@@ -16,7 +16,7 @@ class FewShot(Dataset):
     intended for meta-training and meta-testing paradigm.
     """
 
-    def __init__(self, dataset, root, size, mode, fold, shot, episode):
+    def __init__(self, dataset, root, size, mode, fold, shot, episode=1000):
         super(FewShot, self).__init__()
         self.size = size
         self.mode = mode
@@ -28,9 +28,15 @@ class FewShot(Dataset):
         self.mask_path = os.path.join(root, 'SegmentationClass')
         self.id_path = os.path.join(root, 'ImageSets')
 
-        n_class = 20 if dataset == 'pascal' else 80
+        # n_class = 20 if dataset == 'pascal' else 80
+        if dataset == 'pascal':
+            n_class = 20
+        elif dataset == 'coco':
+            n_class = 80
+        else:
+            n_class = 9
 
-        interval = n_class // 4
+        interval = n_class // 3 if dataset == 'steel' else n_class // 4
         if self.mode == 'train':
             # base classes = all classes - novel classes
             self.classes = set(range(1, n_class + 1)) - set(range(interval * fold + 1, interval * (fold + 1) + 1))
@@ -39,7 +45,7 @@ class FewShot(Dataset):
             self.classes = set(range(interval * fold + 1, interval * (fold + 1) + 1))
         # the image ids must be stored in 'train.txt' and 'val.txt'
         with open(os.path.join(self.id_path, '%s.txt' % mode), 'r') as f:
-            self.ids = f.read().splitlines()
+            self.ids = f.read().splitlines()  #voc 8535个训练样本  测试集364
 
         self._filter_ids()
 
@@ -63,8 +69,8 @@ class FewShot(Dataset):
             mask_s = Image.fromarray(np.array(Image.open(os.path.join(self.mask_path, id_s + ".png"))))
 
             # small objects in support images are filtered following PFENet
-            if np.sum(np.array(mask_s) == cls) < 2 * 32 * 32:
-                continue
+            # if np.sum(np.array(mask_s) == cls) < 2 * 32 * 32:
+            #     continue
 
             id_s_list.append(id_s)
             img_s_list.append(img_s)
@@ -106,13 +112,13 @@ class FewShot(Dataset):
                 continue
 
             # remove images whose valid objects are all small (according to PFENet)
-            exist_large_objects = False
-            for cls in classes:
-                if np.sum(np.array(mask) == cls) >= 2 * 32 * 32:
-                    exist_large_objects = True
-                    break
-            if not exist_large_objects:
-                del self.ids[i]
+            # exist_large_objects = False
+            # for cls in classes:
+            #     if np.sum(np.array(mask) == cls) >= 2 * 32 * 32:
+            #         exist_large_objects = True
+            #         break
+            # if not exist_large_objects:
+            #     del self.ids[i]
 
     # map each valid class to a list of image ids
     def _map_cls_to_cls(self):

@@ -1,3 +1,4 @@
 /VOC2012
-.vscode
 /pretrained/*.pth
+/VOC2007
+/outdir

@@ -1,0 +1,58 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Steel",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--dataset",
+                "steel",
+                "--data-root",
+                "VOC2007",
+                "--backbone",
+                "resnet50",
+                "--fold",
+                "0",
+                "--shot",
+                "5",
+                "--batch-size",
+                "4",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3,4"
+            },
+        },
+        {
+            "name": "VOC",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--dataset",
+                "pascal",
+                "--data-root",
+                "VOC2012",
+                "--backbone",
+                "resnet50",
+                "--fold",
+                "0",
+                "--shot",
+                "5",
+                "--batch-size",
+                "4",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1,2,3,4"
+            },
+        }
+    ]
+}

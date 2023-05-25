@@ -141,6 +141,12 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2,
                                        dilate=replace_stride_with_dilation[1], last_relu=False)
 
+
+        # self.layer3 = self._make_layer(block, 256, layers[2], stride=2,
+        #                         dilate=replace_stride_with_dilation[0], last_relu=True)
+        # self.layer4 = self._make_layer(block, 512, layers[0], stride=2,
+        #                                dilate=replace_stride_with_dilation[0], last_relu=False)
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -186,14 +192,20 @@ class ResNet(nn.Module):
     def base_forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        feat1 = self.relu(x)   #  feat1
+        # print("feat1 shape:", feat1.shape)  
+        x_after_pool = self.maxpool(feat1)
+        
+        feat2 = self.layer1(x_after_pool)
+        # print("feat2 shape", feat2.shape)  # feat2
+        feat3 = self.layer2(feat2)
+        # print("feat3 shape", feat3.shape)  # feat3
+        feat4 = self.layer3(feat3)
+        # print("feat4 shape", feat4.shape)  # feat4
+        # c4 = self.layer4(c3)
+        # print("feat5 shape", c4.shape)  # feat5
 
-        c1 = self.layer1(x)
-        c2 = self.layer2(c1)
-        c3 = self.layer3(c2)
-
-        return c3
+        return {"feat1" : feat1, "feat2" : feat2, "feat3": feat3, "feat4" : feat4}
 
 
 def _resnet(arch, block, layers, pretrained, **kwargs):

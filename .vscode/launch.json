@@ -26,7 +26,32 @@
                 "4",
             ],
             "env": {
-                "CUDA_VISIBLE_DEVICES": "1,2,3,4"
+                "CUDA_VISIBLE_DEVICES": "2,5,6,7"
+            },
+        },
+        {
+            "name": "Steel_test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--dataset",
+                "steel",
+                "--data-root",
+                "VOC2007",
+                "--backbone",
+                "resnet50",
+                "--fold",
+                "1",
+                "--shot",
+                "1",
+                "--batch-size",
+                "1",
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2,7,8"
             },
         },
         {
@@ -44,14 +69,14 @@
                 "--backbone",
                 "resnet50",
                 "--fold",
-                "0",
+                "2",
                 "--shot",
                 "5",
                 "--batch-size",
-                "4",
+                "3",
             ],
             "env": {
-                "CUDA_VISIBLE_DEVICES": "1,2,3,4"
+                "CUDA_VISIBLE_DEVICES": "2,7,8"
             },
         }
     ]

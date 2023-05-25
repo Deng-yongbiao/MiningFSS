@@ -95,7 +95,7 @@ class FewShot(Dataset):
         for k in range(self.shot):
             mask_s_list[k][(mask_s_list[k] != cls) & (mask_s_list[k] != 255)] = 0
             mask_s_list[k][mask_s_list[k] == cls] = 1
-
+        # print("id_q", id_q)
         return img_s_list, mask_s_list, img_q, mask_q, cls, id_s_list, id_q
 
     def __len__(self):

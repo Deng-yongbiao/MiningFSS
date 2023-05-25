@@ -7,7 +7,7 @@ from copy import deepcopy
 import os
 import time
 import torch
-from torch.nn import CrossEntropyLoss, DataParallel
+from torch.nn import CrossEntropyLoss, DataParallel, BCEWithLogitsLoss
 from torch.optim import SGD
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -90,7 +90,7 @@ def evaluate(model, dataloader, args):
         cls = cls[0].item()
 
         with torch.no_grad():
-            pred = model(img_s_list, mask_s_list, img_q)
+            pred = model(img_s_list, mask_s_list, img_q)[0]
             pred = torch.argmax(pred, dim=1)
 
         pred[pred == 1] = cls
@@ -129,6 +129,7 @@ def main():
                 param.requires_grad = False
 
     criterion = CrossEntropyLoss(ignore_index=255)
+    bce_loss = BCEWithLogitsLoss()
     optimizer = SGD([param for param in model.parameters() if param.requires_grad],
                     lr=args.lr, momentum=0.9, weight_decay=5e-4)
 
@@ -156,20 +157,30 @@ def main():
         tbar = tqdm(trainloader)
         set_seed(int(time.time()))
 
-        for i, (img_s_list, mask_s_list, img_q, mask_q, _, _, _) in enumerate(tbar):
+        for i, (img_s_list, mask_s_list, img_q, mask_q, clz, id_s_list, id_q) in enumerate(tbar):
             img_q, mask_q = img_q.cuda(), mask_q.cuda()
             for k in range(len(img_s_list)):
                 img_s_list[k], mask_s_list[k] = img_s_list[k].cuda(), mask_s_list[k].cuda()
 
-            pred = model(img_s_list, mask_s_list, img_q)
-
+            pred, feature_q_all, similarity_fg, similarity_bg, auxiliary_feat = model(img_s_list, mask_s_list, img_q)
             loss = criterion(pred, mask_q)
-            
+            # print("loss:",loss)
+            #======================================================
+            mask_q_back = mask_q.clone()
+            mask_q_back[mask_q_back == 255] = 0
+            mask_q_back = torch.as_tensor(mask_q_back, dtype=torch.float32)
+            b_s = mask_q_back.shape[0]
+            loss_auxiliary = bce_loss(auxiliary_feat.reshape(b_s, -1), mask_q_back.reshape(b_s, -1))
+            # print("loss_auxiliary:",loss_auxiliary)
+            #=====================================================
+            loss_all = loss + loss_auxiliary
             optimizer.zero_grad()
-            loss.backward()
+            # loss.backward()
+            loss_all.backward()
             optimizer.step()
 
-            total_loss += loss.item()
+            # total_loss += loss.item()
+            total_loss += loss_all.item()
 
             iters += 1
             if iters in lr_decay_iters:
